@@ -1,0 +1,7 @@
+{
+  "name": "DataPilot - تحلیل هوشمند داده‌های کسب‌وکار",
+  "description": "پلتفرم تحلیل داده، پاکسازی فایل‌های اکسل و اکسل/CSV، شناسایی ناهنجاری‌ها و دستیار فارسی هوش مصنوعی برای کسب‌وکارهای کوچک و متوسط",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

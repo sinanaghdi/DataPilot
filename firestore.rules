@@ -1,0 +1,126 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net - Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidTimestamp(val) {
+      return val is timestamp || val is string;
+    }
+
+    // Entity Validations
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'email', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['uid', 'email', 'displayName', 'companyName', 'industry', 'createdAt', 'updatedAt']) &&
+        data.uid is string && data.uid.size() <= 128 &&
+        data.uid == request.auth.uid &&
+        data.email is string && data.email.size() <= 256 &&
+        (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 120)) &&
+        (!('companyName' in data) || (data.companyName is string && data.companyName.size() <= 150)) &&
+        (!('industry' in data) || (data.industry is string && data.industry.size() <= 100)) &&
+        isValidTimestamp(data.createdAt) &&
+        isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidProject(data) {
+      return data.keys().hasAll(['id', 'userId', 'title', 'datasetName', 'rowCount', 'columnCount', 'createdAt', 'updatedAt']) &&
+        data.keys().hasOnly(['id', 'userId', 'title', 'description', 'datasetName', 'rowCount', 'columnCount', 'metricsSummary', 'createdAt', 'updatedAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.userId == request.auth.uid &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 200 &&
+        data.datasetName is string && data.datasetName.size() <= 200 &&
+        data.rowCount is number && data.rowCount >= 0 &&
+        data.columnCount is number && data.columnCount >= 0 &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 1000)) &&
+        (!('metricsSummary' in data) || (data.metricsSummary is string && data.metricsSummary.size() <= 5000)) &&
+        isValidTimestamp(data.createdAt) &&
+        isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidAnalysis(data) {
+      return data.keys().hasAll(['id', 'userId', 'projectId', 'title', 'question', 'findings', 'createdAt']) &&
+        data.keys().hasOnly(['id', 'userId', 'projectId', 'title', 'question', 'findings', 'assumptions', 'confidenceScore', 'createdAt']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.userId is string && data.userId.size() <= 128 &&
+        data.userId == request.auth.uid &&
+        data.projectId is string && data.projectId.size() <= 128 &&
+        data.title is string && data.title.size() > 0 && data.title.size() <= 300 &&
+        data.question is string && data.question.size() <= 1000 &&
+        data.findings is string && data.findings.size() <= 8000 &&
+        (!('assumptions' in data) || (data.assumptions is string && data.assumptions.size() <= 2000)) &&
+        (!('confidenceScore' in data) || (data.confidenceScore is number && data.confidenceScore >= 0 && data.confidenceScore <= 100)) &&
+        isValidTimestamp(data.createdAt);
+    }
+
+    // Collection: /users/{userId}
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false; // Blanket user listing is forbidden
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming());
+      allow update: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'companyName', 'industry', 'updatedAt']);
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      // Subcollection: /users/{userId}/projects/{projectId}
+      match /projects/{projectId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(projectId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(projectId) &&
+          incoming().id == projectId &&
+          incoming().userId == userId &&
+          isValidProject(incoming());
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(projectId) &&
+          isValidProject(incoming()) &&
+          incoming().id == existing().id &&
+          incoming().userId == existing().userId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'datasetName', 'rowCount', 'columnCount', 'metricsSummary', 'updatedAt']);
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(projectId);
+      }
+
+      // Subcollection: /users/{userId}/analyses/{analysisId}
+      match /analyses/{analysisId} {
+        allow get: if isOwner(userId) && isValidId(userId) && isValidId(analysisId);
+        allow list: if isOwner(userId) && isValidId(userId);
+        allow create: if isOwner(userId) && isValidId(userId) && isValidId(analysisId) &&
+          incoming().id == analysisId &&
+          incoming().userId == userId &&
+          isValidAnalysis(incoming());
+        allow update: if isOwner(userId) && isValidId(userId) && isValidId(analysisId) &&
+          isValidAnalysis(incoming()) &&
+          incoming().id == existing().id &&
+          incoming().userId == existing().userId &&
+          incoming().projectId == existing().projectId &&
+          incoming().createdAt == existing().createdAt &&
+          incoming().diff(existing()).affectedKeys().hasOnly(['title', 'question', 'findings', 'assumptions', 'confidenceScore']);
+        allow delete: if isOwner(userId) && isValidId(userId) && isValidId(analysisId);
+      }
+    }
+  }
+}

@@ -1,0 +1,166 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile data and business preferences",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Unique identifier of the user matching request.auth.uid",
+          "maxLength": 128
+        },
+        "email": {
+          "type": "string",
+          "description": "User email address",
+          "maxLength": 256
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Full name or Persian display name",
+          "maxLength": 120
+        },
+        "companyName": {
+          "type": "string",
+          "description": "Business or store name",
+          "maxLength": 150
+        },
+        "industry": {
+          "type": "string",
+          "description": "Industry type e.g. خرده‌فروشی، خدمات، تولیدی",
+          "maxLength": 100
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Server timestamp of creation"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Server timestamp of last update"
+        }
+      },
+      "required": ["uid", "email", "createdAt", "updatedAt"]
+    },
+    "SavedProject": {
+      "title": "SavedProject",
+      "description": "Saved dataset project and business analytics configuration",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique project identifier",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner user UID",
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "description": "Project title in Persian",
+          "maxLength": 200
+        },
+        "description": {
+          "type": "string",
+          "description": "Project notes or description",
+          "maxLength": 1000
+        },
+        "datasetName": {
+          "type": "string",
+          "description": "Original file name",
+          "maxLength": 200
+        },
+        "rowCount": {
+          "type": "number",
+          "description": "Total rows processed"
+        },
+        "columnCount": {
+          "type": "number",
+          "description": "Total columns"
+        },
+        "metricsSummary": {
+          "type": "string",
+          "description": "Compact summary of key metrics and indicators",
+          "maxLength": 5000
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Update timestamp"
+        }
+      },
+      "required": ["id", "userId", "title", "datasetName", "rowCount", "columnCount", "createdAt", "updatedAt"]
+    },
+    "SavedAnalysis": {
+      "title": "SavedAnalysis",
+      "description": "Persisted AI query or anomaly insight report",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Analysis record identifier",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner user UID",
+          "maxLength": 128
+        },
+        "projectId": {
+          "type": "string",
+          "description": "Associated project ID",
+          "maxLength": 128
+        },
+        "title": {
+          "type": "string",
+          "description": "Title or headline of the finding",
+          "maxLength": 300
+        },
+        "question": {
+          "type": "string",
+          "description": "User question or analysis topic",
+          "maxLength": 1000
+        },
+        "findings": {
+          "type": "string",
+          "description": "Detailed text of findings and data evidence",
+          "maxLength": 8000
+        },
+        "assumptions": {
+          "type": "string",
+          "description": "Assumptions made in the analysis",
+          "maxLength": 2000
+        },
+        "confidenceScore": {
+          "type": "number",
+          "description": "Evidence confidence from 0 to 100"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp"
+        }
+      },
+      "required": ["id", "userId", "projectId", "title", "question", "findings", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile information"
+    },
+    "/users/{userId}/projects/{projectId}": {
+      "schema": "SavedProject",
+      "description": "Saved analytics projects belonging to the user"
+    },
+    "/users/{userId}/analyses/{analysisId}": {
+      "schema": "SavedAnalysis",
+      "description": "Persisted AI and anomaly analyses"
+    }
+  }
+}
